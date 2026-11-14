@@ -1,7 +1,9 @@
+import os
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 import streamlit as st
 import xgboost as xgb
 import numpy as np
-import os
 
 # Configuración de la página de Streamlit
 st.set_page_config(
@@ -10,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Ruta del modelo entrenado (asegúrate de que esté en la misma ruta)
+# Ruta del modelo entrenado
 MODEL_PATH = "modelo_xgboost_ventas.json"
 
 @st.cache_resource
