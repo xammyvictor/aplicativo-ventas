@@ -3,6 +3,7 @@ os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
 import streamlit as st
 import xgboost as xgb
+import pandas as pd
 import numpy as np
 
 # Configuración de la página de Streamlit
@@ -82,12 +83,14 @@ def main():
             st.error("⚠️ El Día de la Semana debe estar dentro del rango entero de 0 a 6.")
             return
 
-        # Preparación de los datos en el orden exacto esperado por el modelo:
-        # ["Precio Unitario (USD)", "Gasto Publicidad (USD)", "Día Semana (0-6)"]
-        input_data = np.array([[precio_unitario, gasto_publicidad, float(dia_semana)]], dtype=np.float32)
+        # Preparación de los datos usando un DataFrame de Pandas con los nombres exactos esperados por el modelo
+        input_df = pd.DataFrame(
+            [[precio_unitario, gasto_publicidad, float(dia_semana)]],
+            columns=["Precio Unitario (USD)", "Gasto Publicidad (USD)", "Día Semana (0-6)"]
+        )
         
         try:
-            dmatrix = xgb.DMatrix(input_data)
+            dmatrix = xgb.DMatrix(input_df)
             prediction = model.predict(dmatrix)
             pred_value = float(prediction[0])
             
