@@ -5,6 +5,7 @@ import streamlit as st
 import xgboost as xgb
 import pandas as pd
 import numpy as np
+from sklearn.metrics import mean_absolute_error
 
 # Configuración de la página de Streamlit
 st.set_page_config(
@@ -41,8 +42,52 @@ def main():
         st.info(f"Por favor, asegúrate de que el archivo `{MODEL_PATH}` se encuentra en el directorio raíz del repositorio.")
         return
 
-    st.sidebar.header("Parámetros de Entrada")
-    st.sidebar.markdown("Ingrese los valores requeridos:")
+    # --- SECCIÓN LATERAL: EVALUACIÓN DE MAE ---
+    st.sidebar.header("📊 Evaluación del Modelo (MAE)")
+    st.sidebar.markdown("Sube un archivo CSV con datos de prueba para calcular el Error Absoluto Medio.")
+    
+    test_file = st.sidebar.file_uploader("Subir CSV de prueba", type=["csv"])
+    
+    if test_file is not None:
+        try:
+            df_test = pd.read_csv(test_file)
+            st.sidebar.success("¡Archivo cargado con éxito!")
+            
+            # Selector de columna objetivo real
+            target_col = st.sidebar.selectbox(
+                "Selecciona la columna de Ventas Reales (Target)",
+                options=df_test.columns
+            )
+            
+            # Columnas esperadas por el modelo
+            expected_features = ["Precio Unitario (USD)", "Gasto Publicidad (USD)", "Día Semana (0-6)"]
+            
+            # Validar que las columnas existan en el CSV
+            missing_cols = [col for col in expected_features if col not in df_test.columns]
+            
+            if missing_cols:
+                st.sidebar.error(f"⚠️ Faltan las siguientes columnas en el CSV: {missing_cols}")
+            else:
+                if st.sidebar.button("Calcular MAE"):
+                    X_test = df_test[expected_features]
+                    y_true = df_test[target_col]
+                    
+                    # Realizar predicciones en lote
+                    dtest = xgb.DMatrix(X_test)
+                    y_pred = model.predict(dtest)
+                    
+                    # Calcular MAE
+                    mae_value = mean_absolute_error(y_true, y_pred)
+                    
+                    st.sidebar.metric(
+                        label="MAE (Error Absoluto Medio)",
+                        value=f"${mae_value:,.2f} USD"
+                    )
+        except Exception as e:
+            st.sidebar.error(f"⚠️ Error al procesar el archivo: {str(e)}")
+
+    st.sidebar.markdown("---")
+    st.sidebar.header("Parámetros de Entrada Individual")
 
     with st.form("prediction_form"):
         # Formulario de entrada para las 3 variables exactas del modelo
@@ -68,7 +113,7 @@ def main():
             "Día Semana (0-6)",
             options=list(range(7)),
             index=0,
-            help="Día de la semana (0 = Primer día de la semana / Lunes según convención, 6 = Último día)."
+            help="Día de la semana (0 = Primer día de la semana, 6 = Último día)."
         )
         
         submitted = st.form_submit_button("Predecir Ventas")
@@ -83,7 +128,7 @@ def main():
             st.error("⚠️ El Día de la Semana debe estar dentro del rango entero de 0 a 6.")
             return
 
-        # Preparación de los datos usando un DataFrame de Pandas con los nombres exactos esperados por el modelo
+        # Preparación de los datos usando un DataFrame de Pandas con los nombres exactos esperados
         input_df = pd.DataFrame(
             [[precio_unitario, gasto_publicidad, float(dia_semana)]],
             columns=["Precio Unitario (USD)", "Gasto Publicidad (USD)", "Día Semana (0-6)"]
